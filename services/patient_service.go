@@ -1,13 +1,11 @@
 package services
 
 import (
-	"time"
-
-	"hospital/database"
-	"hospital/models"
-	"hospital/utils"
-
 	"gorm.io/gorm"
+	"hospital/models"
+	"hospital/repo"
+	"hospital/utils"
+	"time"
 )
 
 type PatientService struct {
@@ -23,7 +21,7 @@ func NewPatientService() *PatientService {
 // CreatePatient creates a new patient in the database
 func (ps *PatientService) CreatePatient(payload models.PatientPayload) (*models.Patient, error) {
 	// Verify that the assigned doctor exists
-	_, err := ps.doctorService.GetDoctorByID(payload.DoctorID)
+	_, err := repo.GetDoctorByID(payload.DoctorID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +34,9 @@ func (ps *PatientService) CreatePatient(payload models.PatientPayload) (*models.
 		DoctorID:  payload.DoctorID,
 	}
 
-	result := database.GetDB().Create(&patient)
-	if result.Error != nil {
-		return nil, result.Error
+	err = repo.CreatePatient(&patient)
+	if err != nil {
+		return nil, err
 	}
 
 	return &patient, nil
@@ -46,22 +44,15 @@ func (ps *PatientService) CreatePatient(payload models.PatientPayload) (*models.
 
 // GetPatientByID retrieves a patient by ID from the database
 func (ps *PatientService) GetPatientByID(patientID string) (*models.Patient, error) {
-	var patient models.Patient
-	result := database.GetDB().First(&patient, "ID = ?", patientID)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return &patient, nil
+	return repo.GetPatientByID(patientID)
 }
 
 // UpdatePatient updates a patient's details
 func (ps *PatientService) UpdatePatient(patientID string, payload models.UpdatePatientPayload) (*models.Patient, error) {
-	var patient models.Patient
-
 	// Check if the patient exists
-	result := database.GetDB().First(&patient, "ID = ?", patientID)
-	if result.Error != nil {
-		return nil, result.Error
+	_, err := repo.GetPatientByID(patientID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Prepare updates map
@@ -85,33 +76,22 @@ func (ps *PatientService) UpdatePatient(patientID string, payload models.UpdateP
 	updates["updated_at"] = time.Now().Unix()
 
 	// Perform the update
-	result = database.GetDB().Model(&patient).Updates(updates)
-	if result.Error != nil {
-		return nil, result.Error
+	err = repo.UpdatePatient(patientID, updates)
+	if err != nil {
+		return nil, err
 	}
 
-	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-
-	// Re-fetch the updated record
-	database.GetDB().First(&patient, "ID = ?", patientID)
-	return &patient, nil
+	// Return the updated patient
+	return repo.GetPatientByID(patientID)
 }
 
 // GetPatientsByDoctorID retrieves all patients associated with a doctor
 func (ps *PatientService) GetPatientsByDoctorID(doctorID string) ([]models.Patient, error) {
 	// First, verify that the doctor exists
-	_, err := ps.doctorService.GetDoctorByID(doctorID)
+	_, err := repo.GetDoctorByID(doctorID)
 	if err != nil {
 		return nil, err
 	}
 
-	var patients []models.Patient
-	result := database.GetDB().Where("doctor_id = ?", doctorID).Find(&patients)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return patients, nil
+	return repo.GetPatientsByDoctorID(doctorID)
 }

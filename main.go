@@ -1,10 +1,9 @@
 package main
 
 import (
-	"log"
-
 	"hospital/database"
 	"hospital/router"
+	"log"
 )
 
 // main is the entry point of the application.

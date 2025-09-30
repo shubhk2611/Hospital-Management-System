@@ -1,12 +1,14 @@
 package database
 
 import (
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 	"hospital/models"
 	"log"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
+// entry point -> main.go -> database.InitDatabase() ->
 var DB *gorm.DB
 
 // InitDatabase initializes the database connection and performs auto-migration

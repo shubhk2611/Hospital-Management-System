@@ -3,11 +3,9 @@ package services
 import (
 	"time"
 
-	"hospital/database"
 	"hospital/models"
+	"hospital/repo"
 	"hospital/utils"
-
-	"gorm.io/gorm"
 )
 
 type DoctorService struct{}
@@ -24,9 +22,9 @@ func (ds *DoctorService) CreateDoctor(payload models.DoctorPayload) (*models.Doc
 		ContactNo: payload.ContactNo,
 	}
 
-	result := database.GetDB().Create(&doctor)
-	if result.Error != nil {
-		return nil, result.Error
+	err := repo.CreateDoctor(&doctor)
+	if err != nil {
+		return nil, err
 	}
 
 	return &doctor, nil
@@ -34,22 +32,15 @@ func (ds *DoctorService) CreateDoctor(payload models.DoctorPayload) (*models.Doc
 
 // GetDoctorByID retrieves a doctor by ID from the database
 func (ds *DoctorService) GetDoctorByID(doctorID string) (*models.Doctor, error) {
-	var doctor models.Doctor
-	result := database.GetDB().First(&doctor, "ID = ?", doctorID)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return &doctor, nil
+	return repo.GetDoctorByID(doctorID)
 }
 
 // UpdateDoctorContact updates a doctor's contact number
 func (ds *DoctorService) UpdateDoctorContact(doctorID string, payload models.UpdateDoctorPayload) (*models.Doctor, error) {
-	var doctor models.Doctor
-
 	// First, check if the doctor exists
-	result := database.GetDB().First(&doctor, "ID = ?", doctorID)
-	if result.Error != nil {
-		return nil, result.Error
+	_, err := repo.GetDoctorByID(doctorID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Perform the update
@@ -58,16 +49,11 @@ func (ds *DoctorService) UpdateDoctorContact(doctorID string, payload models.Upd
 		"updated_at": time.Now().Unix(),
 	}
 
-	result = database.GetDB().Model(&doctor).Updates(updates)
-	if result.Error != nil {
-		return nil, result.Error
+	err = repo.UpdateDoctor(doctorID, updates)
+	if err != nil {
+		return nil, err
 	}
 
-	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-
-	// Re-fetch the updated record
-	database.GetDB().First(&doctor, "ID = ?", doctorID)
-	return &doctor, nil
+	// Return the updated doctor
+	return repo.GetDoctorByID(doctorID)
 }
